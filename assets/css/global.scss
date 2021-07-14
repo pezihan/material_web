@@ -1,0 +1,59 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-size: 16px;
+    color: rgb(51, 51, 51);
+}
+
+textarea {
+    outline: none;
+    resize : none;
+}
+
+input {
+    outline: none;
+    border: none;
+    padding: 0 15px;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+-webkit-appearance: none;
+}
+
+input::-webkit-input-placeholder{
+    color:rgb(163, 162, 162);
+}
+input::-moz-placeholder{/* Mozilla Firefox 19+ */
+    color:rgb(163, 162, 162);
+}
+input:-moz-placeholder{/* Mozilla Firefox 4 to 18 */
+    color:rgb(163, 162, 162);
+}
+input:-ms-input-placeholder{
+    color:rgb(163, 162, 162);
+}
+
+button {
+    outline: none;
+    border: none;
+    cursor: pointer;
+}
+
+a {
+    text-decoration:none;
+}
+
+// 路由统一动动效
+.page-enter-active, .page-leave-active { // 动画形式
+    transition: .2s;
+}
+.page-enter, .page-leave-active { // 进退动画
+    opacity: 0;
+    margin-left: 100px;
+}
+
+ul {
+    list-style-type: none;
+}
