@@ -24,3 +24,9 @@ Vue.filter('commentTimeFiltra', function (data) {
     const Minut = time.getMinutes() < 10 ? `0${time.getMinutes()}` : time.getMinutes()
     return `${year}年${month}月${date}日 ${hour}:${Minut}`
 })
+
+// 格式化粉丝数量 与 关注
+Vue.filter('holdFansFiltra', function (data) {
+    if (Number(data) < 10000) return data
+    if (Number(data) >= 10000) return String(parseInt(Number(data) / 100) / 100) + 'w'
+})

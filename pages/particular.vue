@@ -2,7 +2,7 @@
     <div v-if="!errorview" class="content" ref="contentRef">
         <div class="content_left">
             <div class="user_content">
-                <div class="user_image">
+                <div class="user_image" @click="openMyHomeClick(viewdata.userMsg.id)">
                     <img :src="viewdata.userMsg.user_image">
                 </div>
                 <div class="user_msg_list">
@@ -34,6 +34,10 @@
                     <span @click.stop="clikeClick(viewdata.id,2)" :class="viewdata.collect == false ? 'iconfont icon-shoucang2' : 'iconfont icon-shoucang4'"></span>
                     <span>{{ viewdata.collectSum }}</span>
                 </div>
+                <div v-if="deleteBtnShow" @click.stop="deleteClick(viewdata.id, viewdata.type)">
+                    <span class="iconfont icon-shanchu"></span>
+                    <span class="delete_text">删除</span>
+                </div>
                 <div @click="downloadClick(viewdata.type == 1 ? viewdata.phone_path : viewdata.video_path)">
                     <span class="iconfont icon-xiazai"></span>
                     <span class="commit_text">下载</span>
@@ -57,7 +61,7 @@
                 </div>
                 <div class="content_view" v-for="item in commentList" :key="item.id">
                     <div class="content_view_user">
-                        <img :src="item.user_image" alt="">
+                        <img :src="item.user_image" alt="" @click="openMyHomeClick(item.user_id)">
                         <div class="view_user_text">
                             <h4>{{ item.user_name }}</h4>
                             <span>{{ item.comment_time | commentTimeFiltra }}</span>
@@ -72,7 +76,7 @@
                     </div>
                     <div class="content_two_view" v-for="item2 in item.commentTwo" :key="item2.id">
                         <div class="content_view_user">
-                            <img :src="item2.user_image" alt="">
+                            <img :src="item2.user_image" alt="" @click="openMyHomeClick(item2.user_id)">
                             <div class="view_user_text">
                                 <h4>{{ item2.user_name }}</h4>
                                 <span>{{ item2.comment_time | commentTimeFiltra }}</span>
@@ -95,8 +99,7 @@
         <div class="content_rigth" ref="recomRef">
             <div class="content_view" v-for="item in similarityData" @click="particularClick(item.id)" :key="item.id">
                 <div class="content_view_img">
-                    <img v-if="item.type == 1" :src="item.phone_path" alt="">
-                    <video v-else :src="item.video_path"></video>
+                    <img :src="item.phone_path" alt="">
                 </div>
                 <div class="content_view_title">
                     <a>{{ item.scene_desc }}</a>
@@ -144,7 +147,9 @@ export default {
             // 视频预览图
             imgUrl: '127.0.0.1:5000/public/user_images/cfaf6d27f0b4a2aa355483745d3e71a0.jpg',
             // 没有评论是显示提示
-            notCommentShow: false
+            notCommentShow: false,
+            // 是否显示删除按钮
+            deleteBtnShow: false
         }
     },
     created () {
@@ -168,6 +173,10 @@ export default {
             res.data.video_path = res.data.video_path ==="" ? "" : `${this.path.video}${res.data.video_path}`
             res.data.phone_path = res.data.phone_path === "" ? "" : `${this.path.images}${res.data.phone_path}`
             res.data.userMsg.user_image = `${this.path.user_images}${res.data.userMsg.user_image}`
+            const userMsg = window.sessionStorage.getItem('userMsg') || ""
+            if (userMsg && Number(JSON.parse(userMsg).id) === Number(res.data.userMsg.id) ) {
+                this.deleteBtnShow = true
+            }
             this.viewdata = res.data
         },
         // 获取类似素材推荐
@@ -208,6 +217,12 @@ export default {
                 this.viewdata.collectSum--
             }
         },
+        // 删除
+        async deleteClick (id, type) {
+            const { data: res } = await this.$axios.delete('/deleteMaterial', { params: { scene_id: id } })
+            if (res.meta.status !== 200) return
+            this.$router.push({ path: '/myHome', query: { id: this.viewdata.user_id, type: type } })
+        },
         // 关注与取消关注
         async holdClick () {
             const { data: res } = await this.$axios.put(`/hold?user_id=${this.viewdata.userMsg.id}`)
@@ -236,6 +251,11 @@ export default {
             } else {
                 this.notCommentShow = false
             }
+        },
+        // 跳转到用户详细页
+        openMyHomeClick (id) {
+            const { href } = this.$router.resolve({ path: '/myHome', query: { id: id } })
+            window.open(href, '_blank');
         },
         // 发送评论
         async sendComentClick(id, type) {
@@ -317,7 +337,7 @@ export default {
         async downloadClick (url) {
            const elt = document.createElement('a');
             elt.setAttribute('href', url);
-            const name = url.substring((url.length - 20),url.length)
+            const name = url.substring((url.length - 20),url.length) + Number(this.viewdata.type) === 1 ? '.jpeg' : '.mp4' 
             elt.setAttribute('download', name)
             elt.style.display = 'none';
             document.body.appendChild(elt);
@@ -349,6 +369,7 @@ export default {
                 border-radius: 100%;
                 overflow: hidden;
                 background-color: #f5b1b1;
+                cursor: pointer;
                 img {
                     width: 100%;
                     height: 100%;
@@ -421,6 +442,9 @@ export default {
                 .iconfont {
                     font-size: 25px;
                     margin-right: 10px;
+                }
+                .delete_text:hover {
+                    color: #f07a7a;
                 }
                 span {
                     color: #666666;
@@ -540,6 +564,7 @@ export default {
                         width: 50px;
                         height: 50px;
                         border-radius: 100%;
+                        cursor: pointer;
                     }
                     .view_user_text {
                         width: 660px;

@@ -53,6 +53,7 @@ export default {
       }
       res.data.forEach(item => {
           item.phone_path = path.images + item.phone_path
+          item.video_path = path.video + item.video_path
           item.userMsg.user_image = path.user_images + item.userMsg.user_image
         })
       let images = res.data
@@ -64,6 +65,7 @@ export default {
         }
         res2.data.forEach(item => {
           item.video_path = path.video + item.video_path
+          item.phone_path = path.images + item.phone_path
           item.userMsg.user_image = path.user_images + item.userMsg.user_image
         })
         let video = res2.data

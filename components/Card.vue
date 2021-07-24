@@ -1,8 +1,9 @@
 <template>
     <div class="content" @click="particularClick">
         <div class="scenne_content_view" :style="'background-color:' + backgroudColor + ';'">
-            <img @load="imageLoad" v-show="viewdata.type == 1" :src="viewdata.phone_path" alt="">
-            <video v-show="viewdata.type == 2" :src="viewdata.video_path"></video>
+            <img @load="imageLoad" :src="viewdata.phone_path" alt="">
+            <!-- <video v-show="viewdata.type == 2" :src="viewdata.video_path"></video> -->
+            <img class="audit_not_view" v-show="viewdata.state == 2" src="../assets/images/not_min.png">
         </div>
         <span class="user_decs_text">{{ viewdata.scene_desc }}</span>
         <div class="user_scene_sum">
@@ -31,6 +32,8 @@ export default {
     name: 'Card',
     data () {
         return {
+            // 是否在是移动端
+            mobile: false,
            backgroudColor: '#fc9d9b',
            // 颜色
            colorArr: [
@@ -117,6 +120,14 @@ export default {
                 width: 100%;
                 cursor: pointer;
                 margin-bottom: 5px;
+            }
+            .audit_not_view {
+                position: absolute;
+                width: 180px;
+                height: 180px;
+                top: 20%;
+                left: 50%;
+                transform: translateX(-50%);
             }
         }
         .user_decs_text {

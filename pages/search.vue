@@ -27,7 +27,7 @@
             </div>
             <p>{{ item.signature | signatureFiltra }}</p>
           </div>
-          <button>查看</button>
+          <button @click="openMyHomeClick(item.user_id)">查看</button>
         </div>
       </div>
     </div>
@@ -157,6 +157,11 @@ export default {
             index++
         })
         this.flexList = flexList
+    },
+     // 跳转到用户详细页
+    openMyHomeClick (id) {
+        const { href } = this.$router.resolve({ path: '/myHome', query: { id: id } })
+        window.open(href, '_blank');
     },
     // 获取数据
     async getlistData () {

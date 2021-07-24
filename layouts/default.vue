@@ -167,6 +167,17 @@ export default {
       const token = this.$cookies.get('token')
       if (!token) {
         this.loginViewShow = true
+        return
+      }
+      const userMsg = window.sessionStorage.getItem('userMsg') || ""
+        if (userMsg) {
+          const query = {
+          id: JSON.parse(userMsg).id,
+          type: type
+        }
+        if (type === 1) delete query.type
+        const { href } = this.$router.resolve({ path: '/myHome', query: query })
+        window.open(href, '_blank');
       }
     },
     // 关闭登录页面
