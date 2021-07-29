@@ -75,6 +75,10 @@ export default {
     },
     async asyncData ({ $axios, query, $cookies }) {
     let path = $cookies.get('path')
+    if (path == "" || path == undefined || path == null) {
+        const { data } = await $axios.get('/resource')
+        path = data.data
+      }
     let queryinfo = {
       query: query.query === undefined || query.query === null ? "" : query.query,
       state: 1,
@@ -118,9 +122,9 @@ export default {
       this.getlistData()
     }
     // 保存搜索历史
-    let history = JSON.parse(window.sessionStorage.getItem('history')) || ''
+    let history = JSON.parse(window.localStorage.getItem('history')) || []
     const query = this.$route.query.query
-    if (history !== '') {
+    if (history !== []) {
       const index = history.findIndex(v => v === query)
       if (index === -1 && query !== "" && query !== "" && query !== null && query !== undefined) {
         history.unshift(query)
@@ -134,7 +138,7 @@ export default {
       }
     }
     this.historyList = history.slice(0,8)
-    window.sessionStorage.setItem('history', JSON.stringify(history))
+    window.localStorage.setItem('history', JSON.stringify(history))
   },
   methods: {
     // 类型切换

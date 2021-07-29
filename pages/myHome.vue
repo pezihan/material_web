@@ -2,7 +2,8 @@
     <div v-if="!errorview" class="content">
         <div class="background_imaegs_view">
             <img :src="userMsg.background" alt="">
-            <button>更换背景</button>
+            <button v-if="buttonShow" @click="setbackground">更换背景</button>
+            <input class="fileInput" type="file" accept=".png,.jpg,.jpeg" name="" ref="uploadbackgroudImgRef" style="display:none"  @change="uploadbackgroudChange($event)"/>
             <div v-if="userMsg.region">
                 <span class="iconfont icon-weizhi1"></span>
                 <span>{{ userMsg.region }}</span>
@@ -13,9 +14,14 @@
                 <img :src="userMsg.user_image" alt="">
             </div>
             <h4>{{ userMsg.user_name }}</h4>
-            <div class="user_flash">关注 {{ userMsg.holdSum | holdFansFiltra }} | 粉丝 {{ userMsg.fansSum | holdFansFiltra }}</div>
+            <div class="user_flash">
+                <span @click="holdFansClick(1, userMsg.id)">关注 {{ userMsg.holdSum | holdFansFiltra }}</span>
+                <span>|</span>
+                <span @click="holdFansClick(2, userMsg.id)">粉丝 {{ userMsg.fansSum | holdFansFiltra }}</span>
+            </div>
             <p>{{ userMsg.signature == null || userMsg.signature == "" ? '暂无简介' : userMsg.signature }}</p>
-            <button v-if="buttonShow">编辑</button>
+            <button v-if="buttonShow" @click="redactUserMsg">编辑</button>
+            <button v-else @click="redactUserMsg">{{ userMsg.hold == true ? '取消关注' : '关注' }}</button>
         </div>
         <div class="content_view">
             <div class="content_left">
@@ -54,7 +60,7 @@ export default {
         return {
             // 错误页面
             errorview: false,
-            // 用户编辑按钮显示隐藏
+            // 用户编辑按钮显示隐藏(判断是否是自己的主页)
             buttonShow: false,
             // 用户信息
             userMsg: '',
@@ -86,13 +92,17 @@ export default {
         window.addEventListener('scroll', this.scrollviewuser)
     },
     methods: {
+        // 跳转到粉丝页面
+        holdFansClick (type, userId) {
+            this.$router.push({ path: '/relation', query: { type, user_id: userId } })
+        },
         // 获取用户信息
         async getUserMsg () {
             const { data: res } = await this.$axios.get('/userMsg', { params: { user_id: this.querinfo.user_id } })
             if (res.meta.status !== 200) return this.errorview = !this.errorview
             res.data.background = res.data.background === "" || res.data.background === null ? '/_nuxt/assets/images/home.jpg' : this.path.images + res.data.background
             res.data.user_image = this.path.user_images + res.data.user_image
-            const userMsg = window.sessionStorage.getItem('userMsg') || ""
+            const userMsg = window.localStorage.getItem('userMsg') || ""
             if (userMsg && Number(JSON.parse(userMsg).id) === Number(this.querinfo.user_id) ) {
                 this.buttonShow = true
             }
@@ -143,6 +153,40 @@ export default {
             if (allHeight - scrollTop <= 1000 && this.loadingShow == true) {
                 this.querinfo.start++
                 this.getDataList()
+            }
+        },
+        // 修改用户背景
+        setbackground () {
+            const upload = this.$refs.uploadbackgroudImgRef
+            upload.click()
+        },
+        // 上传
+        async uploadbackgroudChange (e) {
+            // 图片大小不超过1M
+            const limitSize = 1024 * 1024 * 1 // 1M
+            const file = e.target.files[0]
+            if (file.size > limitSize) return alert('背景大小不能大于1M')
+            const forms = new FormData()
+            forms.append('file', file)
+            const configs = {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            }
+            const { data: res } = await this.$axios.post('/background', forms, configs)
+            if (res.meta.status !== 201) return alert('上传失败')
+            location.reload()
+        },
+        // 编辑资料
+        async redactUserMsg() {
+            if (this.buttonShow) {
+                this.$router.push({ path: '/redact', query: { path: this.$route.name, user_id: this.userMsg.id } })
+            } else {
+                // 关注也取消关注
+                const { data: res } = await this.$axios.put(`/hold?user_id=${this.userMsg.id}`)
+                if (res.meta.status === 401) {
+                    this.$router.push({ path: this.$route.path, query: { login: new Date().getTime() } })
+                }
+                if (res.meta.status !== 200) return
+                this.userMsg.hold = !this.userMsg.hold
             }
         }
     }
@@ -214,6 +258,10 @@ export default {
             text-align: center;
         }
         .user_flash {
+            span {
+                cursor: pointer;
+                margin: 0 8px;
+            }
             width: 100%;
             text-align: center;
             margin: 10px 0;
@@ -227,7 +275,7 @@ export default {
         button {
             width: 80px;
             height: 30px;
-            background-color: #777777;
+            background-color: #ec7b7b;
             color: #fff;
             border-radius: 50px;
             line-height: 30px;

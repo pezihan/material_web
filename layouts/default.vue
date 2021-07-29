@@ -16,7 +16,7 @@
             <span class="iconfont icon-shoucang"></span>
             <span>我的收藏</span>
           </div>
-          <div>
+          <div @click="updateShowClick">
             <span class="iconfont icon-shangchuan"></span>
             <span>上传作品</span>
           </div>
@@ -75,8 +75,43 @@
       <span class="iconfont icon-icon-arrow-top4"></span>
     </div>
     <div class="placeholder"></div>
-    <nuxt-child class="router"></nuxt-child>
+    <div class="shade_content" v-show="updateShow" @click="tagShow = false">
+      <div class="update_content">
+        <div class="update_title">
+          <h4>上传作品</h4>
+          <span class="iconfont icon-tubiaozhizuomoban-" @click="updateShow = false"></span>
+        </div>
+        <input class="fileInput" type="file" accept=".png,.jpg,.jpeg,.mp4,.mov" name="" ref="uploadworkImgRef" style="display:none"  @change="uploadworkChange($event)"/>
+        <div class="update_view">
+          <div @click="updateSeleteclick" v-show="updateImg == ''" class="update_images">
+            <span>+</span>
+          </div>
+          <div v-show="updateImg != ''" class="update_image_view">
+            <img v-if="updateData.type == 1" :src="updateImg" alt="">
+            <video v-else :src="updateImg"></video>
+          </div>
+          <div class="schedule_view"><div :style="'width:' + updateRate +';'"></div></div>
+          <div class="input_content">
+            <textarea v-show="!tagShow" v-model="updateData.scene_desc" placeholder="填写准确的描述，会获得更多首页推荐机会呦～"></textarea>
+            <div v-show="tagShow" class="tag_select">
+              <div v-for="item in tagList" @click.stop="selectTagClick(item.action, item.id)" :class="item.action == true ? 'tag_action' : ''" :key="item.id">
+                <span>+</span>
+                <span>{{ item.name }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="remind_text">{{ remindText }}</div>
+          <div class="select_content" @click.stop="tagShow = true">
+            <span class="iconfont icon-ico-"></span>
+            <span v-if="!selectText">请选择与作品相关的标签</span>
+            <span class="tag_view" v-else>{{ selectText }}</span>
+          </div>
+          <button :disabled="disabled" :class="disabled == true ? 'disabled_action':''" @click="sendmartatClick">发布</button>
+        </div>
+      </div>
+    </div>
     <!-- 路由容器 -->
+    <nuxt-child class="router"></nuxt-child>
   </div>
 </template>
 
@@ -114,7 +149,31 @@ export default {
       // 资源访问路径
       path: "",
       // 退出登录按钮显示
-      escBtnShow: false
+      escBtnShow: false,
+      // 控制选择标签组件显示隐藏
+      tagShow: false,
+      // 提示文字
+      remindText: '',
+      // 上传进度
+      updateRate: '20%',
+      // 上传面板显示隐藏
+      updateShow: false,
+      // 标签列表
+      tagList: '',
+      // 要上传的图片
+      updateImg: '',
+      // 要发布提交的参数
+      updateData: {
+        scene_desc: '',
+        type: 1,
+        tag_arr: []
+      },
+      // 上传数据表单
+      forms: '',
+      // 发布按钮是否禁用
+      disabled: false,
+      // 已选标签文字
+      selectText: ''
     }
   },
   created () {
@@ -130,7 +189,7 @@ export default {
   mounted () {
     this.path = this.$cookies.get('path')
     window.addEventListener('scroll', this.scrollMenu)
-    const userMsg = window.sessionStorage.getItem('userMsg') || ""
+    const userMsg = window.localStorage.getItem('userMsg') || ""
     if (userMsg) {
       this.userImage = this.path.user_images + JSON.parse(userMsg).user_image
       this.userName = JSON.parse(userMsg).user_name
@@ -140,7 +199,7 @@ export default {
     // 退出登录
     exitLogin () {
       this.$cookies.remove('token')
-      window.sessionStorage.clear()
+      window.localStorage.clear()
       location.reload()
     },
     // 搜索
@@ -169,7 +228,7 @@ export default {
         this.loginViewShow = true
         return
       }
-      const userMsg = window.sessionStorage.getItem('userMsg') || ""
+      const userMsg = window.localStorage.getItem('userMsg') || ""
         if (userMsg) {
           const query = {
           id: JSON.parse(userMsg).id,
@@ -260,7 +319,8 @@ export default {
       if (res.meta.status === 200 || res.meta.status == 100) {
         this.viewText = ''
         this.$cookies.set('token', res.data.token)
-        window.sessionStorage.setItem('userMsg', JSON.stringify(res.data))
+        window.localStorage.setItem('userMsg', JSON.stringify(res.data))
+        window.localStorage.setItem('token', res.data.token)
         this.loginViewShow = false
         this.userImage = this.path.user_images + res.data.user_image
         this.userName = res.data.user_name
@@ -273,6 +333,95 @@ export default {
       } else {
         this.viewText = res.meta.msg
       }
+    },
+    // 显示上传组件
+    async updateShowClick () {
+      const token = this.$cookies.get('token')
+      if (!token) {
+        this.loginViewShow = true
+        return
+      }
+      this.updateShow = true
+      this.updateRate = '0%'
+      this.remindText = ''
+      this.updateImg = ''
+      this.tagShow = false
+      this.forms = ''
+      this.updateData.scene_desc = ''
+      this.disabled = false
+      this.updateData.tag_arr = []
+      const { data: res } = await this.$axios.get('/classify')
+      if (res.meta.status !== 200) return this.remindText = res.meta.msg
+      res.data.forEach(item => {
+        item.action = false
+      })
+      this.tagList = res.data
+    },
+    // 打开上传选择E
+    updateSeleteclick () {
+      const upload = this.$refs.uploadworkImgRef
+      upload.click()
+    },
+    // 上传
+    async uploadworkChange (ev) {
+      // const limitSize = 1024 * 1024 * 1 // 1M
+      const file = ev.target.files[0]
+      if (file.type === 'video/mp4' || file.type === 'video/mov' || file.type === 'video/avi') {
+        this.updateData.type = 2
+      } else {
+        this.updateData.type = 1
+      }
+      const url = window.URL.createObjectURL(ev.target.files.item(0));
+      this.updateImg = url
+      this.forms = new FormData()
+      this.forms.append('file', file)
+    },
+    // 发布作品
+    async sendmartatClick () {
+      if (!this.forms) return this.remindText = '请先选择要发布的作品'
+      const configs = {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress:function (e) {
+            if (e.lengthComputable) {
+                const rate = parseInt(e.loaded / e.total * 100); //已上传的比例
+                this.updateRate = String(rate) + '%'
+            }
+        }.bind(this)
+      }
+      this.tagList.forEach(item => {
+        if (item.action) {
+          this.updateData.tag_arr.push(item.id)
+        }
+      })
+      this.disabled = true
+      const url = `/upMaterial?json=${JSON.stringify(this.updateData)}`
+      this.$axios.post(url, this.forms, configs ).then(res => {
+        if (res.data.meta.status !== 201) {
+          this.remindText = res.data.meta.msg
+          this.disabled = false
+          alert(res.data.meta.msg)
+        } else {
+          this.updateShow = false
+          alert('发布成功')
+        }
+      }).catch(() => {
+          this.disabled = false
+          this.remindText = '上传失败'
+          alert('上传失败')
+        })
+    },
+    // 显示标签选择面板
+    async selectTagClick(action, id) {
+      let text = ''
+      this.tagList.forEach(item => {
+        if (id == item.id) {
+          item.action = !action
+        }
+        if (item.action) {
+          text += '#'+item.name
+        }
+      })
+      this.selectText = text
     }
   },
   watch: {
@@ -324,9 +473,21 @@ export default {
       span {
         color: #8b8a8a !important;
       }
+      div {
+        &:hover {
+          span {
+            color: #f07a7a !important;
+          }
+          
+        }
+      }
     }
     .user_name_text {
       color: #777777;
+      width: 50px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
   }
   .head_view {
@@ -354,7 +515,7 @@ export default {
       }
       .head_content_search {
         input {
-          width: 500px;
+          width: 450px;
           height: 50px;
           border-top-left-radius: 30px;
           border-bottom-left-radius: 30px;
@@ -582,6 +743,10 @@ export default {
   .user_name_text {
     color: #fff;
     transform: translateX(-50%);
+    width: 60px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
   }
   .action {
     background-color: #999 !important;
@@ -610,5 +775,179 @@ export default {
         color: #fff;
       }
     }
+  }
+  .shade_content {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, .4);
+    position: fixed;
+    z-index: 10000;
+    top: 0;
+    left: 0;
+    .update_content {
+      width: 650px;
+      height: 600px;
+      top: 50%; left: 50%;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      background-color: #fff;
+      border-radius: 10px;
+    }
+    .update_title {
+      position: relative;
+      border-bottom: 2px solid #cfcfcf;
+      height: 50px;
+      background-color: #fff;
+      h4 {
+        text-align: center;
+        line-height: 50px;
+        font-size: 20px;
+      }
+      span {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        right: 10px;
+        font-size: 20px;
+        cursor: pointer;
+        &:hover {
+          color: #f07a7a;
+        }
+      }
+    }
+    .update_view {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      .update_images {
+        width: 200px;
+        height: 200px;
+        border: 5px dotted #cfcfcf;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+        cursor: pointer;
+        &:hover {
+          border: 5px dotted #ee9393;
+          span {
+            color: #ee9393;
+          }
+        }
+        span {
+          font-size: 100px;
+          font-weight: 900;
+          color: #cfcfcf;
+          text-align: center;
+          line-height: 180px;
+        }
+      }
+      .update_image_view {
+        width: 100%;
+        height: 200px;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+        img {
+          height: 200px;
+        }
+      }
+      .schedule_view {
+        width: 100%;
+        height: 8px;
+        border: 1px solid#e6e6e6;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        overflow: hidden;
+        div {
+          height: 100%;
+          background-color: #ee9393;
+          transition: .3s;
+        }
+      }
+      .input_content {
+        border: 1px solid #cfcfcf;
+        border-radius: 5px;
+        width: 550px;
+        height: 100px;
+        overflow: hidden;
+        textarea {
+          width: 100%;
+          height: 100%;
+          border: none;
+          padding: 10px;
+          color: #5c5c5c;
+        }
+        .tag_select {
+          width: 100%;
+          height: 100%;
+          overflow: scroll;
+          &::-webkit-scrollbar {display:none;}
+          padding: 5px;
+          .tag_action  {
+            border: 1px solid #ee9393;
+          }
+          div {
+            cursor: pointer;
+            background-color: #eaeaea;
+            width: auto;
+            height: 30px;
+            display: inline-block;
+            padding: 0 5px;
+            border-radius: 2px;
+            margin: 5px 5px;
+            span {
+              &:nth-child(1) {
+                color: #ff9494;
+                font-size: 20px;
+                font-weight: 900;
+              }
+              &:nth-child(2) {
+                color: #898989;
+              }
+            }
+          }
+        }
+      }
+      .remind_text {
+        width: 550px;
+        height: 40px;
+        text-align: right;
+        margin: 10px 0;
+        color: #e47777;
+      }
+      .select_content {
+        width: 550px;
+        height: 30px;
+        border-bottom: 1px solid #cfcfcf;
+        margin-bottom: 20px;
+        cursor: pointer;
+        .iconfont {
+          font-size: 20px;
+          color: #4e4e4e;
+        }
+        span {
+          color: #9e9d9d;
+        }
+        .tag_view {
+          display: inline-block;
+          width: 520px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+      button {
+        width: 180px;
+        height: 40px;
+        background-color: #ee9393;
+        border-radius: 8px;
+        color: #fff;
+      }
+    }
+  }
+  .disabled_action {
+    background-color: #858585 !important;
+    cursor: not-allowed;
   }
 </style>

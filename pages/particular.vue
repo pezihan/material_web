@@ -9,15 +9,17 @@
                     <h4>{{ viewdata.userMsg.user_name }}</h4>
                     <span>{{ viewdata.up_time | commentTimeFiltra }}</span>
                 </div>
-                <button @click="holdClick">{{ viewdata.userMsg.hold === true ? '取消关注' : '关注' }}</button>
+                <button @click="holdClick">{{ viewdata.userMsg.hold === true ? '取消关注' : '关注' }} </button>
             </div>
-            <h4 class="content_scene_desc">{{ viewdata.scene_desc }}</h4>
+            <h4 class="content_scene_desc">{{ viewdata.scene_desc }}</h4> 
             <div class="content_view">
                 <img  v-show="viewdata.type == 1" :src="viewdata.phone_path" alt="">
                 <div v-show="viewdata.type == 2" class="video_content">
-                    <img :width="videoHeight" :height="videoWidth" :src="imgUrl" alt="">
-                    <video ref="videoRef" :width="videoWidth" :height="videoHeight" :src="viewdata.video_path" controls preload autoplay>
-                        <!-- <source :src="path.video + viewdata.video_path"> -->
+                    <img @load="imageLoad($event)" ref="ImageRef" :width="videoHeight" :height="videoWidth" :src="viewdata.phone_path" alt="">
+                    <video id="video" :src="viewdata.video_path" ref="videoRef" :width="videoWidth" :height="videoHeight" preload="auto" poster autoplay controls>
+                        <!-- <source :src="viewdata.video_path"  type="video/mp4">
+                        <source :src="viewdata.video_path"  type="video/MOV">
+                        <source :src="viewdata.video_path"  type="video/mov"> -->
                     </video>
                 </div>
             </div>
@@ -144,8 +146,6 @@ export default {
             videoWidth: '100%',
             // 视频高
             videoHeight: '',
-            // 视频预览图
-            imgUrl: '127.0.0.1:5000/public/user_images/cfaf6d27f0b4a2aa355483745d3e71a0.jpg',
             // 没有评论是显示提示
             notCommentShow: false,
             // 是否显示删除按钮
@@ -157,14 +157,17 @@ export default {
     },
     mounted () {
         this.getViewData()
-        this.videoCanplay()
-        this.initialize()
         this.similarity()
         this.getComment()
         window.addEventListener('resize', this.recomdetailsView)
         window.addEventListener('scroll', this.recomdetailsView)
     },
     methods: {
+        // 判断移动端
+        _isMobile() {
+            let flag = navigator.userAgent.match(/(phone|pad|pod|iPhone|iPod|ios|iPad|Android|Mobile|BlackBerry|IEMobile|MQQBrowser|JUC|Fennec|wOSBrowser|BrowserNG|WebOS|Symbian|Windows Phone)/i)
+            return flag
+        },
         // 获取素材信息
         async getViewData () {
             const id = this.$route.query.id
@@ -173,7 +176,7 @@ export default {
             res.data.video_path = res.data.video_path ==="" ? "" : `${this.path.video}${res.data.video_path}`
             res.data.phone_path = res.data.phone_path === "" ? "" : `${this.path.images}${res.data.phone_path}`
             res.data.userMsg.user_image = `${this.path.user_images}${res.data.userMsg.user_image}`
-            const userMsg = window.sessionStorage.getItem('userMsg') || ""
+            const userMsg = window.localStorage.getItem('userMsg') || ""
             if (userMsg && Number(JSON.parse(userMsg).id) === Number(res.data.userMsg.id) ) {
                 this.deleteBtnShow = true
             }
@@ -301,20 +304,17 @@ export default {
             this.commentInfo.start++
             this.getComment()
         },
-        // 视频初始化
-        videoCanplay () {
-            this.$refs.videoRef.addEventListener('canplay', function () {
-                const width = this.$refs.videoRef.videoWidth
-                const height = this.$refs.videoRef.videoHeight
-                console.log(width, height);
-                if (width > height) {
+        imageLoad(ev) {
+            const width = ev.path[0].naturalWidth
+            const height = ev.path[0].naturalHeight
+            console.log(width, height);
+            if (width > height) {
                 this.videoWidth = '100%'
                 this.videoHeight = ''
-                } else {
+            } else {
                 this.videoWidth = ''
                 this.videoHeight = '100%'
-                }
-            }.bind(this))
+            }
         },
         // 推荐框自适应
         recomdetailsView () {
@@ -323,16 +323,16 @@ export default {
             this.$refs.recomRef.style.top = '100px'
             this.$refs.recomRef.style.left = viewLeft + 820 + 'px'
         },
-        // 截取视频图片
-        initialize () {
-            this.$refs.videoRef.addEventListener('loadeddata', function () {
-                var canvas = document.createElement("canvas");
-                canvas.width = this.$refs.videoRef.videoWidth * 0.8
-                canvas.height = this.$refs.videoRef.videoHeight * 0.8
-                canvas.getContext('2d').drawImage(this.$refs.videoRef, 0, 0, canvas.width, canvas.height)
-                this.imgUrl = canvas.toDataURL("image/png")
-            }.bind(this))
-        },
+        // // 截取视频图片
+        // initialize () {
+        //     this.$refs.videoRef.addEventListener('loadeddata', function () {
+        //         var canvas = document.createElement("canvas");
+        //         canvas.width = this.$refs.videoRef.videoWidth * 0.8
+        //         canvas.height = this.$refs.videoRef.videoHeight * 0.8
+        //         canvas.getContext('2d').drawImage(this.$refs.videoRef, 0, 0, canvas.width, canvas.height)
+        //         this.imgUrl = canvas.toDataURL("image/png")
+        //     }.bind(this))
+        // },
         // 下载视频或图片
         async downloadClick (url) {
            const elt = document.createElement('a');

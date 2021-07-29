@@ -1,5 +1,5 @@
 <template>
-  <div class="container">
+  <div class="container" v-if="!errorview">
     <div class="content_images"><img src="../assets/images/home.jpg" alt=""></div>
     <div class="conetent">
       <div class="classify_content">
@@ -23,6 +23,9 @@
       </div>
     </div>
   </div>
+  <div v-else class="error_content">
+    <img src="../assets/images/error404.gif" alt="">
+  </div>
 </template>
 
 <script>
@@ -43,6 +46,10 @@ export default {
           limit: 30
         }
       let path = $cookies.get('path')
+      if (path == "" || path == undefined || path == null) {
+        const { data } = await $axios.get('/resource')
+        path = data.data
+      }
       // 获取分类标签
       const  { data } = await $axios.get('/classify')
       let classify = data.data
@@ -198,4 +205,17 @@ export default {
       }
     }
   }
+  .error_content {
+        width: 100%;
+        height: 600px;
+        font-weight: 600;
+        color: #f07a7a;
+        position: relative;
+        img {
+            width: 600px;
+            position: absolute;
+            left: 50%; top: 50%;
+            transform: translate(-50%,-50%);
+        }
+    }
 </style>

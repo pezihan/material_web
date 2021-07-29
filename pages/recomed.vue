@@ -37,6 +37,10 @@ export default {
   },
   async asyncData ({ $axios, query, $cookies }) {
     let path = $cookies.get('path')
+    if (path == "" || path == undefined || path == null) {
+        const { data } = await $axios.get('/resource')
+        path = data.data
+      }
     let queryinfo = {
       type: Number(query.type),
       start: 1,
